@@ -1,11 +1,11 @@
-package main
+package Practice
 
 import (
 	"log"
 	"os"
 )
 
-func main() {
+func Copy_file() {
 	src := "C:\\Users\\WATBUD\\Desktop\\Test.txt"
 
 	dest := "C:\\Users\\WATBUD\\Desktop\\words2.txt"

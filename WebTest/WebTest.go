@@ -1,12 +1,11 @@
 package main
 
 import (
-	customHttp "WebTest/CustomHttp"
-	"fmt"
+	//customHttp "WebTest/CustomHttp"
+	GET_POST "WebTest/GET_POST"
 )
 
 func main() {
-	fmt.Println("Hello world") //這個寫入到 w 的是輸出到客戶端的
-
-	customHttp.StartListenServe()
+	//customHttp.StartListenServe()
+	GET_POST.HttpGet()
 }

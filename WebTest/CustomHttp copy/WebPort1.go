@@ -10,7 +10,7 @@ func Test(w http.ResponseWriter, _request *http.Request) {
 }
 
 func SayhelloName(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Enter SayhelloName")
+	fmt.Fprintf(w, "Enter SayhelloName") //這個寫入到 w 的是輸出到客戶端的
 }
 
 func Testlog(_rs http.ResponseWriter, _request *http.Request) {
