@@ -1,4 +1,4 @@
-package Practice
+package main
 
 import (
 	"fmt"

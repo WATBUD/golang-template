@@ -1,4 +1,4 @@
-package Practice
+package main
 
 import (
 	"fmt"
@@ -11,4 +11,5 @@ func PointerTest() {
 	//fmt.Printf("%d\n", "TTTTTTTTTTTTTTT") //取值*
 
 }
+
 //程序(進程)、執行緒(線程)、協程
