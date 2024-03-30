@@ -1,0 +1,90 @@
+version: "3.6"
+services:
+  lb:
+    container_name: "tw_lb"
+    restart: always
+    build:
+      context: ./haproxy
+    ports:
+      - 80:80
+  service_register:
+    container_name: "tw_service_register"
+    image: consul:latest
+    ports:
+      - "8500:8500"
+    logging:
+      driver: none  
+  redis:
+    container_name: "tw_redis"
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - db:/var/lib/redis/data
+    logging:
+      driver: none
+  database:
+    container_name: "tw_database"
+    image: postgres:12.13-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=pg
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=twitter
+    ports:
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+    logging:
+      driver: none  
+  rabbit:
+    image: "rabbitmq:3-management-alpine"
+    container_name: "tw_mq"
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+    logging:
+      driver: none  
+  auth:
+    build: ./auth
+    container_name: tw_auth
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - database
+      - redis  
+      - service_register
+      - lb
+  tweet:
+    build: ./tweet
+    container_name: tw_tweet
+    restart: always
+    ports:
+      - 8090:8090
+    depends_on:
+      - database
+      - redis  
+      - service_register
+      - lb
+      - rabbit
+  timeline:
+    build: ./timeline
+    container_name: tw_timeline
+    restart: always
+    ports:
+      - 8100:8100
+    depends_on:
+      - database
+      - redis  
+      - service_register
+      - lb
+      - rabbit
+networks:
+  default:
+    external:
+      name: Twitter
+volumes:
+  db:
