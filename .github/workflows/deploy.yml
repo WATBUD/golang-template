@@ -57,7 +57,6 @@ env:
 
 jobs:
   deploy:
-    # Add 'id-token' with the intended permissions for workload identity federation
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -71,8 +70,9 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v1'
         with:
-          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
-          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+          workload_identity_provider: 'projects/760527922880/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
+          service_account: '760527922880-compute@developer.gserviceaccount.com'
+          audience: 'https://iam.googleapis.com/projects/760527922880/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
           project_id: ${{ env.PROJECT_ID }}
 
       # NOTE: Alternative option - authentication via credentials json
