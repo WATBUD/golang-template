@@ -27,13 +27,13 @@ jobs:
 
     - name: Authenticate to Google Cloud
       id: 'auth'
-      uses: 'google-github-actions/auth@v0.5.3'
+      uses: 'google-github-actions/auth@v0'
       with:
         workload_identity_provider: 'projects/760527922880/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
         service_account: '760527922880-compute@developer.gserviceaccount.com'
 
     - name: Configure gcloud CLI
-      uses: google-github-actions/setup-gcloud@v0.9.1
+      uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
