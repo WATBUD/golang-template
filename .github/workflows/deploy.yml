@@ -72,7 +72,7 @@ jobs:
         uses: 'google-github-actions/auth@v1'
         with:
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
-          service_account_email: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
           project_id: ${{ env.PROJECT_ID }}
 
       # NOTE: Alternative option - authentication via credentials json
