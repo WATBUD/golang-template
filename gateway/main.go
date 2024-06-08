@@ -14,7 +14,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, world!-gateway-gateway")
+		fmt.Fprintln(w, "Hello, world!-gateway-1.22.4")
 	})
 
 	log.Printf("Listening on port %s", port)
