@@ -1,5 +1,5 @@
 # Start with the official Golang image as the build environment
-FROM golang:1.22.4 as builder
+FROM golang:1.22 as builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -23,7 +23,7 @@ WORKDIR /
 COPY --from=builder /app/main /main
 
 # Expose port 8080 to the outside world
-EXPOSE 8080
+EXPOSE 9999
 
 # Command to run the executable
 CMD ["/main"]
