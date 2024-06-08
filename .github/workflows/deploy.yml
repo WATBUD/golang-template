@@ -90,7 +90,7 @@ jobs:
           region: ${{ env.REGION }}
           project_id: ${{ env.PROJECT_ID }}
           # NOTE: If required, update to the appropriate source folder
-          source: ./
+          source: ./gateway
 
       # If required, use the Cloud Run url output in later steps
       - name: Show Output
