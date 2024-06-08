@@ -10,11 +10,11 @@ COPY gateway/ .
 # Download and cache dependencies
 RUN go mod download
 
-# Build the Go app
-RUN go build -o main .
+# Build the Go app with static linking
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o main .
 
 # Use a minimal base image to run the Go app
-FROM gcr.io/distroless/base-debian10
+FROM gcr.io/distroless/static-debian10
 
 # Set the working directory inside the container
 WORKDIR /
@@ -23,7 +23,7 @@ WORKDIR /
 COPY --from=builder /app/main /main
 
 # Expose port 8080 to the outside world
-EXPOSE 8888
+EXPOSE 8080
 
 # Command to run the executable
 CMD ["/main"]
