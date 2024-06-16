@@ -6,4 +6,6 @@ use (
 	./gateway
 	./user
 	./database
+	./rbacShell2
+	./rbacLocal1
 )
