@@ -1,4 +1,4 @@
-module rbacShell2
+module rbacDBModel
 
 go 1.22.3
 
