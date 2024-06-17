@@ -8,27 +8,32 @@ import (
 
 	"github.com/open-policy-agent/opa/rego"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"mai.today/database"
 )
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 連接到MongoDB
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	// Connect to MongoDB
+	mongoClient, err := database.NewMongoClient()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
+
+	// // 連接到MongoDB
+	// client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
+		if err = mongoClient.Disconnect(ctx); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	rolesCollection := client.Database("rbac_db").Collection("roles")
-	usersCollection := client.Database("rbac_db").Collection("users")
+	rolesCollection := mongoClient.Database("rbac_db").Collection("roles")
+	usersCollection := mongoClient.Database("rbac_db").Collection("users")
 
 	// 從MongoDB讀取角色和權限
 	var rolesData []bson.M

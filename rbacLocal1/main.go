@@ -11,7 +11,6 @@ import (
 func main() {
 	// 創建一個背景上下文
 	ctx := context.Background()
-
 	// 加載Rego策略並準備查詢
 	query, err := rego.New(
 		rego.Query("data.rbac.allow"),           // 定義查詢，檢查策略中的`allow`規則
