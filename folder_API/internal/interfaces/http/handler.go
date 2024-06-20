@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
@@ -25,12 +26,28 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.Create(r.Context(), &folder); err != nil {
+	if err := h.repo.Create(context.Background(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Define a response struct without the ID field
+	type FolderResponse struct {
+		Name        string `json:"name"`
+		Color       string `json:"color"`
+		Index       int    `json:"index"`
+		ParentIndex int    `json:"parentIndex"`
+	}
 
-	json.NewEncoder(w).Encode(folder)
+	response := FolderResponse{
+		Name:        folder.Name,
+		Color:       folder.Color,
+		Index:       folder.Index,
+		ParentIndex: folder.ParentIndex,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {

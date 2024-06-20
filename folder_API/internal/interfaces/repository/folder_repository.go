@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
 
@@ -20,7 +21,25 @@ func NewMongoFolderRepository(client *mongo.Client) usecases.FolderRepository {
 }
 
 func (r *MongoFolderRepository) Create(ctx context.Context, folder *entities.Folder) error {
-	_, err := r.collection.InsertOne(ctx, folder)
+	// Generate a new ObjectID if not already set
+	if folder.ID.IsZero() {
+		folder.ID = primitive.NewObjectID()
+	}
+
+	// Check for duplicate combination of parentIndex and index
+	filter := bson.M{
+		"parentIndex": folder.ParentIndex,
+		"index":       folder.Index,
+	}
+	count, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("combination of parentIndex %d and index %d already exists", folder.ParentIndex, folder.Index)
+	}
+
+	_, err = r.collection.InsertOne(ctx, folder)
 	return err
 }
 
