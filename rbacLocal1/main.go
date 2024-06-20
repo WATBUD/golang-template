@@ -1,4 +1,4 @@
-package main
+package rbacLocal1
 
 import (
 	"context"

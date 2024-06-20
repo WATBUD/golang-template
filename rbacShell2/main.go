@@ -1,4 +1,4 @@
-package main
+package rbacShell2
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"mai.today/database"
 )
 
-func main() {
+func init() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

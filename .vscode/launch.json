@@ -7,7 +7,8 @@
             "request": "launch",
             "mode": "auto",
             //"program": "${file}",
-            "program": "${workspaceFolder}",
+            "program": "${fileDirname}", // 使用當前文件所在的文件夾
+            //"program": "${workspaceFolder}",
             "env": {},
             "args": []
         }

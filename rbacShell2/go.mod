@@ -1,4 +1,4 @@
-module rbacShell2
+module mai.today/rbacShell2
 
 go 1.22.3
 

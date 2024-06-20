@@ -1,4 +1,4 @@
-package rbacDBModel
+package main
 
 import (
 	"context"

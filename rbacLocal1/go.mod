@@ -1,4 +1,4 @@
-module rbacLocal1
+module mai.today/rbacLocal1
 
 go 1.22.3
 
