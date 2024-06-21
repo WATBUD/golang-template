@@ -1,11 +1,15 @@
 package entities
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"time"
+)
 
 type Folder struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Name        string             `bson:"name" json:"name"`
-	Color       string             `bson:"color" json:"color"`
-	Index       int                `bson:"index" json:"index"`
-	ParentIndex int                `bson:"parentIndex" json:"parentIndex"`
+	BaseID      string    `bson:"base_id" json:"base_id"`
+	Name        string    `bson:"name" json:"name"`
+	Color       string    `bson:"color" json:"color"`
+	FolderIndex int       `bson:"folderIndex" json:"folderIndex"`
+	ParentIndex int       `bson:"parentIndex" json:"parentIndex"`
+	CreatedAt   time.Time `bson:"createdAt" json:"createdAt"`
+	UpdatedAt   time.Time `bson:"updatedAt" json:"updatedAt"`
 }

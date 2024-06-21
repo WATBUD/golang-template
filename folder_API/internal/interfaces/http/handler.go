@@ -6,6 +6,7 @@ import (
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -32,17 +33,21 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	// Define a response struct without the ID field
 	type FolderResponse struct {
-		Name        string `json:"name"`
-		Color       string `json:"color"`
-		Index       int    `json:"index"`
-		ParentIndex int    `json:"parentIndex"`
+		Name        string    `json:"name"`
+		Color       string    `json:"color"`
+		FloderIndex int       `json:"folderIndex"`
+		ParentIndex int       `json:"parentIndex"`
+		CreatedAt   time.Time `json:"createdAt"`
+		UpdatedAt   time.Time `json:"updatedAt"`
 	}
 
 	response := FolderResponse{
 		Name:        folder.Name,
 		Color:       folder.Color,
-		Index:       folder.Index,
+		FloderIndex: folder.FolderIndex,
 		ParentIndex: folder.ParentIndex,
+		CreatedAt:   folder.CreatedAt,
+		UpdatedAt:   folder.UpdatedAt,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -78,9 +83,9 @@ func (h *FolderHandler) GetFolder(w http.ResponseWriter, r *http.Request) {
 
 func (h *FolderHandler) UpdateFolder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(params["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	BaseID := params["BaseID"]
+	if BaseID == "" {
+		http.Error(w, "BaseID is required", http.StatusBadRequest)
 		return
 	}
 
@@ -89,7 +94,7 @@ func (h *FolderHandler) UpdateFolder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	folder.ID = id
+	folder.BaseID = BaseID
 
 	if err := h.repo.Update(r.Context(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
