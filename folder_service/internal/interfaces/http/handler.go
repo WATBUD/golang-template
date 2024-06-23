@@ -6,7 +6,6 @@ import (
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -32,27 +31,25 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Define a response struct without the ID field
-	type FolderResponse struct {
-		Name        string    `json:"name"`
-		Color       string    `json:"color"`
-		FloderIndex int       `json:"folderIndex"`
-		ParentIndex int       `json:"parentIndex"`
-		CreatedAt   time.Time `json:"createdAt"`
-		UpdatedAt   time.Time `json:"updatedAt"`
-	}
+	// type FolderResponse struct {
+	// 	Name      string    `json:"name"`
+	// 	Color     string    `json:"color"`
+	// 	ParentID  string    `json:"ParentID"`
+	// 	CreatedAt time.Time `json:"createdAt"`
+	// 	UpdatedAt time.Time `json:"updatedAt"`
+	// }
 
-	response := FolderResponse{
-		Name:        folder.Name,
-		Color:       folder.Color,
-		FloderIndex: folder.FolderIndex,
-		ParentIndex: folder.ParentIndex,
-		CreatedAt:   folder.CreatedAt,
-		UpdatedAt:   folder.UpdatedAt,
-	}
+	// response := FolderResponse{
+	// 	Name:      folder.Name,
+	// 	Color:     folder.Color,
+	// 	ParentID:  *folder.ParentID,
+	// 	CreatedAt: folder.CreatedAt,
+	// 	UpdatedAt: folder.UpdatedAt,
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(folder)
 }
 
 func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {

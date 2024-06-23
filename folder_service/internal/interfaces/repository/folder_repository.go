@@ -35,7 +35,7 @@ func (r *MongoFolderRepository) Create(ctx context.Context, folder *entities.Fol
 	folder.UpdatedAt = now
 	// Check for duplicate combination of parentIndex and folderIndex
 	filter := bson.M{
-		"parentIndex": folder.ParentIndex,
+		"parentIndex": folder.ParentID,
 		"folderIndex": folder.FolderIndex,
 	}
 	count, err := r.collection.CountDocuments(ctx, filter)
@@ -43,7 +43,7 @@ func (r *MongoFolderRepository) Create(ctx context.Context, folder *entities.Fol
 		return err
 	}
 	if count > 0 {
-		return fmt.Errorf("combination of parentIndex %d and folderIndex %d already exists", folder.ParentIndex, folder.FolderIndex)
+		return fmt.Errorf("combination of parentIndex %d and folderIndex %d already exists", folder.ParentID, folder.FolderIndex)
 	}
 
 	_, err = r.collection.InsertOne(ctx, folder)
