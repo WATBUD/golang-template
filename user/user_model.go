@@ -33,5 +33,5 @@ type UserInfo struct {
 }
 
 type UserBase struct {
-	BaseID []string `bson:"base_id" json:"base_id"` //TODO
+	base_id []string `bson:"base_id" json:"base_id"` //TODO
 }

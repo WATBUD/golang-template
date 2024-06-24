@@ -9,5 +9,5 @@ use (
 	./rbacShell2
 	./rbacLocal1
 	./rbac_db
-	./folder_API
+	./folder_service
 )

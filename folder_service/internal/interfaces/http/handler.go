@@ -26,26 +26,10 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.Create(context.Background(), &folder); err != nil {
+	if err := h.repo.CreateFolder(context.Background(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Define a response struct without the ID field
-	// type FolderResponse struct {
-	// 	Name      string    `json:"name"`
-	// 	Color     string    `json:"color"`
-	// 	ParentID  string    `json:"ParentID"`
-	// 	CreatedAt time.Time `json:"createdAt"`
-	// 	UpdatedAt time.Time `json:"updatedAt"`
-	// }
-
-	// response := FolderResponse{
-	// 	Name:      folder.Name,
-	// 	Color:     folder.Color,
-	// 	ParentID:  *folder.ParentID,
-	// 	CreatedAt: folder.CreatedAt,
-	// 	UpdatedAt: folder.UpdatedAt,
-	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -110,30 +94,6 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Delete(r.Context(), id.Hex()); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *FolderHandler) UpdateFolderIndex(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(params["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var requestBody struct {
-		Index int `json:"index"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.UpdateIndex(r.Context(), id.Hex(), requestBody.Index); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

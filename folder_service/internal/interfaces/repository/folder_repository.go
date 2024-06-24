@@ -21,33 +21,43 @@ func NewMongoFolderRepository(client *mongo.Client) usecases.FolderRepository {
 	return &MongoFolderRepository{collection: collection}
 }
 
-func (r *MongoFolderRepository) Create(ctx context.Context, folder *entities.Folder) error {
-	// Generate a new ObjectID if not already set
-	// if folder.BaseID.IsZero() {
-	// 	folder.BaseID = primitive.NewObjectID()
-	// }
+func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entities.Folder) error {
 	if folder.BaseID == "" {
 		return fmt.Errorf("BaseID is required and cannot be empty")
 	}
-
 	now := time.Now()
 	folder.CreatedAt = now
 	folder.UpdatedAt = now
-	// Check for duplicate combination of parentIndex and folderIndex
-	filter := bson.M{
-		"parentIndex": folder.ParentID,
-		"folderIndex": folder.FolderIndex,
+	if folder.ChildIDs == nil {
+		folder.ChildIDs = []string{}
 	}
-	count, err := r.collection.CountDocuments(ctx, filter)
+	// 插入新文件夾
+	insertResult, err := r.collection.InsertOne(ctx, folder)
 	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return fmt.Errorf("combination of parentIndex %d and folderIndex %d already exists", folder.ParentID, folder.FolderIndex)
+		return fmt.Errorf("failed to insert folder: %w", err)
 	}
 
-	_, err = r.collection.InsertOne(ctx, folder)
-	return err
+	// 檢查是否提供了 ParentID
+	if folder.ParentID != nil && *folder.ParentID != "" {
+		newFolderID := insertResult.InsertedID
+
+		// 更新父文件夾的 ChildIDs
+		filter := bson.M{"_id": folder.ParentID}
+		update := bson.M{
+			"$push": bson.M{
+				"ChildIDs": newFolderID,
+			},
+			"$set": bson.M{
+				"UpdatedAt": now,
+			},
+		}
+		_, err := r.collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			return fmt.Errorf("failed to update parent folder's ChildIDs: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *MongoFolderRepository) FindAll(ctx context.Context) ([]*entities.Folder, error) {

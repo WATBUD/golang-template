@@ -6,7 +6,7 @@ import (
 )
 
 type FolderRepository interface {
-	Create(ctx context.Context, folder *entities.Folder) error
+	CreateFolder(ctx context.Context, folder *entities.Folder) error
 	FindAll(ctx context.Context) ([]*entities.Folder, error)
 	FindByID(ctx context.Context, id string) (*entities.Folder, error)
 	Update(ctx context.Context, folder *entities.Folder) error

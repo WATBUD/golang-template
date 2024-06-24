@@ -38,7 +38,6 @@ func main() {
 	router.HandleFunc("/folders/{id}", folderHandler.GetFolder).Methods("GET")
 	router.HandleFunc("/folders/{id}", folderHandler.UpdateFolder).Methods("PUT")
 	router.HandleFunc("/folders/{id}", folderHandler.DeleteFolder).Methods("DELETE")
-	router.HandleFunc("/folders/{id}/index", folderHandler.UpdateFolderIndex).Methods("PUT")
 	router.HandleFunc("/folders/{id}/parent", folderHandler.UpdateFolderParent).Methods("PUT")
 
 	// Start the HTTP server
