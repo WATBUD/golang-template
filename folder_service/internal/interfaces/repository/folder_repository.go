@@ -21,9 +21,9 @@ func NewMongoFolderRepository(client *mongo.Client) usecases.FolderRepository {
 	return &MongoFolderRepository{collection: collection}
 }
 
-func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entities.Folder) error {
+func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entities.Folder) (*entities.Folder, error) {
 	if folder.BaseID == "" {
-		return fmt.Errorf("BaseID is required and cannot be empty")
+		return nil, fmt.Errorf("BaseID is required and cannot be empty")
 	}
 	now := time.Now()
 	folder.CreatedAt = now
@@ -31,36 +31,51 @@ func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entiti
 	if folder.ChildIDs == nil {
 		folder.ChildIDs = []string{}
 	}
-	// 插入新文件夾
+	// Insert the new folder
 	insertResult, err := r.collection.InsertOne(ctx, folder)
 	if err != nil {
-		return fmt.Errorf("failed to insert folder: %w", err)
+		return nil, fmt.Errorf("failed to insert folder: %w", err)
 	}
 
-	// 檢查是否提供了 ParentID
-	if folder.ParentID != nil && *folder.ParentID != "" {
-		newFolderID := insertResult.InsertedID
+	// Retrieve the inserted document
+	var insertedFolder entities.Folder
+	err = r.collection.FindOne(ctx, bson.M{"_id": insertResult.InsertedID}).Decode(&insertedFolder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve inserted folder: %w", err)
+	}
+	// newFolderID := insertResult.InsertedID.(primitive.ObjectID).Hex()
+	// folder.ID = newFolderID
 
-		// 更新父文件夾的 ChildIDs
-		filter := bson.M{"_id": folder.ParentID}
+	// Check if ParentID is provided
+	if folder.ParentID != "" {
+		newFolderID := insertResult.InsertedID.(primitive.ObjectID).Hex()
+		parentObjectID, err := primitive.ObjectIDFromHex(folder.ParentID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parent_id: %w", err)
+		}
+
+		// Update the parent folder's ChildIDs
+		filter := bson.M{"_id": parentObjectID}
 		update := bson.M{
 			"$push": bson.M{
-				"ChildIDs": newFolderID,
+				"child_ids": newFolderID,
 			},
 			"$set": bson.M{
-				"UpdatedAt": now,
+				"updated_at": now,
 			},
 		}
-		_, err := r.collection.UpdateOne(ctx, filter, update)
+		updateResult, err := r.collection.UpdateOne(ctx, filter, update)
 		if err != nil {
-			return fmt.Errorf("failed to update parent folder's ChildIDs: %w", err)
+			return nil, fmt.Errorf("failed to update parent folder's ChildIDs: %w", err)
 		}
+
+		fmt.Printf("updateResult.MatchedCount: %d", updateResult.MatchedCount)
 	}
 
-	return nil
+	return &insertedFolder, nil
 }
 
-func (r *MongoFolderRepository) FindAll(ctx context.Context) ([]*entities.Folder, error) {
+func (r *MongoFolderRepository) GetFolders(ctx context.Context) ([]*entities.Folder, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
@@ -86,38 +101,79 @@ func (r *MongoFolderRepository) FindByID(ctx context.Context, id string) (*entit
 	return &folder, nil
 }
 
-func (r *MongoFolderRepository) Update(ctx context.Context, folder *entities.Folder) error {
-	objID, err := primitive.ObjectIDFromHex(folder.BaseID)
+func (r *MongoFolderRepository) UpdateFolderData(ctx context.Context, folder *entities.Folder) error {
+	objectID, err := primitive.ObjectIDFromHex(folder.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid parent_id: %w", err)
 	}
-	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": folder})
+	now := time.Now()
+	folder.UpdatedAt = now
+	filter := bson.M{"_id": objectID, "base_id": folder.BaseID}
+	update := bson.M{
+		"$set": bson.M{
+			"name":       folder.Name,
+			"color":      folder.Color,
+			"parent_id":  folder.ParentID,
+			"child_ids":  folder.ChildIDs,
+			"data":       folder.Data,
+			"updated_at": folder.UpdatedAt,
+		},
+	}
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to update folder: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("no matching document found for ID: %s and BaseID: %s", folder.ID, folder.BaseID)
+	}
+	return nil
+}
+func (r *MongoFolderRepository) DeleteFolder(ctx context.Context, folder *entities.Folder) error {
+	objectID, err := primitive.ObjectIDFromHex(folder.ID)
+	if err != nil {
+		return fmt.Errorf("invalid parent_id: %w", err)
+	}
+	// Find the folder to be deleted based on the _id
+	var folderToDelete entities.Folder
+	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&folderToDelete)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("folder not found")
+		}
+		return fmt.Errorf("failed to find folder: %w", err)
+	}
+
+	// Collect ObjectIDs that need to be deleted
+	objIDs := []primitive.ObjectID{objectID} // Add the main folder's ObjectID to the delete list
+
+	// Convert ChildIDs to ObjectIDs and add them to the delete list
+	for _, childID := range folderToDelete.ChildIDs {
+		childObjID, err := primitive.ObjectIDFromHex(childID)
+		if err != nil {
+			return fmt.Errorf("invalid child ID: %w", err)
+		}
+		objIDs = append(objIDs, childObjID)
+	}
+
+	// Delete all collected ObjectIDs
+	_, err = r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}})
 	return err
 }
 
-func (r *MongoFolderRepository) Delete(ctx context.Context, id string) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": objID})
+func (r *MongoFolderRepository) UpdateFolderParentID(ctx context.Context, objectID string, parentID string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"base_id": objectID},
+		bson.M{"$set": bson.M{"parent_id": parentID}},
+	)
 	return err
 }
 
-func (r *MongoFolderRepository) UpdateIndex(ctx context.Context, id string, folderIndex int) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"folderIndex": folderIndex}})
-	return err
-}
-
-func (r *MongoFolderRepository) UpdateParent(ctx context.Context, id string, parentIndex int) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"parentIndex": parentIndex}})
+func (r *MongoFolderRepository) AddChildIDToParent(ctx context.Context, parentID string, childID string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"base_id": parentID},
+		bson.M{"$addToSet": bson.M{"child_ids": childID}},
+	)
 	return err
 }

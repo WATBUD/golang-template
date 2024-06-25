@@ -6,11 +6,11 @@ import (
 )
 
 type FolderRepository interface {
-	CreateFolder(ctx context.Context, folder *entities.Folder) error
-	FindAll(ctx context.Context) ([]*entities.Folder, error)
+	CreateFolder(ctx context.Context, folder *entities.Folder) (*entities.Folder, error)
+	GetFolders(ctx context.Context) ([]*entities.Folder, error)
 	FindByID(ctx context.Context, id string) (*entities.Folder, error)
-	Update(ctx context.Context, folder *entities.Folder) error
-	Delete(ctx context.Context, id string) error
-	UpdateIndex(ctx context.Context, id string, index int) error
-	UpdateParent(ctx context.Context, id string, parentIndex int) error
+	UpdateFolderData(ctx context.Context, folder *entities.Folder) error
+	DeleteFolder(ctx context.Context, folder *entities.Folder) error
+	UpdateFolderParentID(ctx context.Context, baseID string, parentID string) error
+	AddChildIDToParent(ctx context.Context, parentID string, childID string) error
 }

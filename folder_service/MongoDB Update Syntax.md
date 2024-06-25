@@ -1,7 +1,7 @@
 {
   "$set": {
     "base_id": "",
-    "createdAt": ISODate(),
-    "updatedAt": ISODate(),
+    "created_at": ISODate(),
+    "updated_at": ISODate(),
   }
 }

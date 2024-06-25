@@ -1,14 +1,12 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type FolderHandler struct {
@@ -20,24 +18,57 @@ func NewFolderHandler(repo usecases.FolderRepository) *FolderHandler {
 }
 
 func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var folder entities.Folder
+	err := json.NewDecoder(r.Body).Decode(&folder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create the folder to get its ID
+	insertResult, err := h.repo.CreateFolder(ctx, &folder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(insertResult)
+}
+
+func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id := params["id"]
+	if id == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
 	var folder entities.Folder
 	if err := json.NewDecoder(r.Body).Decode(&folder); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Ensure BaseID is provided
+	if folder.BaseID == "" {
+		http.Error(w, "BaseID is required", http.StatusBadRequest)
+		return
+	}
+	// Set the ID from the URL parameter
+	folder.ID = id
 
-	if err := h.repo.CreateFolder(context.Background(), &folder); err != nil {
+	if err := h.repo.DeleteFolder(r.Context(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(folder)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Delete successful"})
 }
 
 func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {
-	folders, err := h.repo.FindAll(r.Context())
+	folders, err := h.repo.GetFolders(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -46,78 +77,59 @@ func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(folders)
 }
 
-func (h *FolderHandler) GetFolder(w http.ResponseWriter, r *http.Request) {
+func (h *FolderHandler) UpdateFolderData(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(params["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	id := params["id"]
+	if id == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
-	folder, err := h.repo.FindByID(r.Context(), id.Hex())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	json.NewEncoder(w).Encode(folder)
-}
-
-func (h *FolderHandler) UpdateFolder(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	BaseID := params["BaseID"]
-	if BaseID == "" {
-		http.Error(w, "BaseID is required", http.StatusBadRequest)
-		return
-	}
-
 	var folder entities.Folder
 	if err := json.NewDecoder(r.Body).Decode(&folder); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	folder.BaseID = BaseID
+	// Ensure BaseID is provided
+	if folder.BaseID == "" {
+		http.Error(w, "BaseID is required", http.StatusBadRequest)
+		return
+	}
+	// Set the ID from the URL parameter
+	folder.ID = id
 
-	if err := h.repo.Update(r.Context(), &folder); err != nil {
+	if err := h.repo.UpdateFolderData(r.Context(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(folder)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Update successful"})
+	//json.NewEncoder(w).Encode(folder)
 }
 
-func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(params["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.Delete(r.Context(), id.Hex()); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *FolderHandler) UpdateFolderParent(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(params["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+func (h *FolderHandler) UpdateFolderParentAndChildIDs(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
-		ParentIndex int `json:"parentIndex"`
+		BaseID   string `json:"base_id"`
+		ParentID string `json:"parent_id"`
+		ObjectID string `json:"object_id"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.repo.UpdateParent(r.Context(), id.Hex(), requestBody.ParentIndex); err != nil {
+	ctx := r.Context()
+
+	// Update the parent ID of the folder
+	if err := h.repo.UpdateFolderParentID(ctx, requestBody.ObjectID, requestBody.ParentID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Add the ObjectID to the ChildIDs of the new parent folder
+	if err := h.repo.AddChildIDToParent(ctx, requestBody.ParentID, requestBody.ObjectID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
