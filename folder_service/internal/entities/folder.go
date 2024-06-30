@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"errors"
 	"time"
 )
 
@@ -13,24 +14,39 @@ type Folder struct {
 	ID        string     `bson:"_id,omitempty"`
 	BaseID    string     `bson:"base_id"`
 	ParentID  string     `bson:"parent_id,omitempty"`
-	Position  float64    `bson:"position"`
+	Position  *float64   `bson:"position"`
 	CreatedAt time.Time  `bson:"created_at"`
 	UpdatedAt time.Time  `bson:"updated_at"`
 	Data      FolderData `bson:"data"` // 前端custome任意儲存的資料(color/name et cetera)
 	Type      string     `bson:"type"`
 }
 
+// sets the default values for a Folder
+func (f *Folder) CheackDefaultValues(operationType string) error {
+	if f.BaseID == "" {
+		return errors.New("BaseID is required and cannot be empty")
+	}
+	now := time.Now()
+	if operationType == "create" {
+		if f.Position == nil {
+			// Handle case where Position is not set
+			defaultPosition := -999.
+			f.Position = &defaultPosition
+		}
+		if *f.Position < 0 {
+			return errors.New("position must be a non-negative integer")
+		}
+		f.CreatedAt = now
+		f.Type = "folder"
+	}
+	f.UpdatedAt = now
+
+	return nil
+}
+
 type FolderData struct {
 	Name  string `bson:"name"`
 	Color string `bson:"color"`
-}
-
-// Initialize sets the default values for a Folder
-func (f *Folder) Initialize() {
-	now := time.Now()
-	f.CreatedAt = now
-	f.UpdatedAt = now
-	f.Type = "folder"
 }
 
 type Board struct {

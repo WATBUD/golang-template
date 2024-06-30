@@ -26,25 +26,17 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if folder.BaseID == "" {
-		http.Error(w, "BaseID is required and cannot be empty", http.StatusBadRequest)
-		return
-	}
-	if folder.Position < 0 {
-		http.Error(w, "Position must be a non-negative integer", http.StatusBadRequest)
-		return
-	}
-	exists, err := h.repo.PositionExists(ctx, folder.Position)
+	err = folder.CheackDefaultValues("create")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if exists {
-		http.Error(w, "Position already exists", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	folder.Initialize()
+	err = h.repo.PositionExists(ctx, folder.BaseID, folder.ParentID, *folder.Position)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Create the folder to get its ID
 	insertResult, err := h.repo.CreateFolder(ctx, &folder)
@@ -58,22 +50,23 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 
 func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+	var folder entities.Folder
+	err := json.NewDecoder(r.Body).Decode(&folder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	id := params["id"]
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
-
-	var folder entities.Folder
-	if err := json.NewDecoder(r.Body).Decode(&folder); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	// Set the ID from the URL parameter
 	folder.ID = id
-	// Ensure BaseID is provided
-	if folder.BaseID == "" {
-		http.Error(w, "BaseID is required", http.StatusBadRequest)
+	err = folder.CheackDefaultValues("delete")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

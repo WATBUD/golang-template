@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
@@ -137,11 +138,22 @@ func (r *MongoFolderRepository) AddChildIDToParent(ctx context.Context, parentID
 	return err
 }
 
-func (r *MongoFolderRepository) PositionExists(ctx context.Context, position float64) (bool, error) {
-	filter := bson.M{"position": position}
+func (r *MongoFolderRepository) PositionExists(ctx context.Context, baseID string, parentID string, position float64) error {
+	filter := bson.M{
+		"base_id":  baseID,
+		"position": position,
+		"$or": []bson.M{
+			{"parent_id": parentID},
+			{"parent_id": nil},
+		},
+	}
+
 	count, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return count > 0, nil
+	if count > 0 {
+		return errors.New("position already exists for the same baseID and parentID")
+	}
+	return nil
 }
