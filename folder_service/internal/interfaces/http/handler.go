@@ -5,6 +5,7 @@ import (
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -19,13 +20,31 @@ func NewFolderHandler(repo usecases.FolderRepository) *FolderHandler {
 
 func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	var folder entities.Folder
 	err := json.NewDecoder(r.Body).Decode(&folder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if folder.BaseID == "" {
+		http.Error(w, "BaseID is required and cannot be empty", http.StatusBadRequest)
+		return
+	}
+	if folder.Position < 0 {
+		http.Error(w, "Position must be a non-negative integer", http.StatusBadRequest)
+		return
+	}
+	exists, err := h.repo.PositionExists(ctx, folder.Position)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "Position already exists", http.StatusBadRequest)
+		return
+	}
+
+	folder.Initialize()
 
 	// Create the folder to get its ID
 	insertResult, err := h.repo.CreateFolder(ctx, &folder)
@@ -44,18 +63,19 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
+
 	var folder entities.Folder
 	if err := json.NewDecoder(r.Body).Decode(&folder); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Set the ID from the URL parameter
+	folder.ID = id
 	// Ensure BaseID is provided
 	if folder.BaseID == "" {
 		http.Error(w, "BaseID is required", http.StatusBadRequest)
 		return
 	}
-	// Set the ID from the URL parameter
-	folder.ID = id
 
 	if err := h.repo.DeleteFolder(r.Context(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +116,8 @@ func (h *FolderHandler) UpdateFolderData(w http.ResponseWriter, r *http.Request)
 	}
 	// Set the ID from the URL parameter
 	folder.ID = id
-
+	now := time.Now()
+	folder.UpdatedAt = now
 	if err := h.repo.UpdateFolderData(r.Context(), &folder); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

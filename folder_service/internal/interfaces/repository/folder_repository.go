@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,21 +21,11 @@ func NewMongoFolderRepository(client *mongo.Client) usecases.FolderRepository {
 }
 
 func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entities.Folder) (*entities.Folder, error) {
-	if folder.BaseID == "" {
-		return nil, fmt.Errorf("BaseID is required and cannot be empty")
-	}
-	now := time.Now()
-	folder.CreatedAt = now
-	folder.UpdatedAt = now
-	if folder.ChildIDs == nil {
-		folder.ChildIDs = []string{}
-	}
 	// Insert the new folder
 	insertResult, err := r.collection.InsertOne(ctx, folder)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert folder: %w", err)
 	}
-
 	// Retrieve the inserted document
 	var insertedFolder entities.Folder
 	err = r.collection.FindOne(ctx, bson.M{"_id": insertResult.InsertedID}).Decode(&insertedFolder)
@@ -45,33 +34,6 @@ func (r *MongoFolderRepository) CreateFolder(ctx context.Context, folder *entiti
 	}
 	// newFolderID := insertResult.InsertedID.(primitive.ObjectID).Hex()
 	// folder.ID = newFolderID
-
-	// Check if ParentID is provided
-	if folder.ParentID != "" {
-		newFolderID := insertResult.InsertedID.(primitive.ObjectID).Hex()
-		parentObjectID, err := primitive.ObjectIDFromHex(folder.ParentID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid parent_id: %w", err)
-		}
-
-		// Update the parent folder's ChildIDs
-		filter := bson.M{"_id": parentObjectID}
-		update := bson.M{
-			"$push": bson.M{
-				"child_ids": newFolderID,
-			},
-			"$set": bson.M{
-				"updated_at": now,
-			},
-		}
-		updateResult, err := r.collection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update parent folder's ChildIDs: %w", err)
-		}
-
-		fmt.Printf("updateResult.MatchedCount: %d", updateResult.MatchedCount)
-	}
-
 	return &insertedFolder, nil
 }
 
@@ -106,15 +68,11 @@ func (r *MongoFolderRepository) UpdateFolderData(ctx context.Context, folder *en
 	if err != nil {
 		return fmt.Errorf("invalid parent_id: %w", err)
 	}
-	now := time.Now()
-	folder.UpdatedAt = now
 	filter := bson.M{"_id": objectID, "base_id": folder.BaseID}
 	update := bson.M{
 		"$set": bson.M{
-			"name":       folder.Name,
-			"color":      folder.Color,
 			"parent_id":  folder.ParentID,
-			"child_ids":  folder.ChildIDs,
+			"position":   folder.Position,
 			"data":       folder.Data,
 			"updated_at": folder.UpdatedAt,
 		},
@@ -128,6 +86,7 @@ func (r *MongoFolderRepository) UpdateFolderData(ctx context.Context, folder *en
 	}
 	return nil
 }
+
 func (r *MongoFolderRepository) DeleteFolder(ctx context.Context, folder *entities.Folder) error {
 	objectID, err := primitive.ObjectIDFromHex(folder.ID)
 	if err != nil {
@@ -147,13 +106,13 @@ func (r *MongoFolderRepository) DeleteFolder(ctx context.Context, folder *entiti
 	objIDs := []primitive.ObjectID{objectID} // Add the main folder's ObjectID to the delete list
 
 	// Convert ChildIDs to ObjectIDs and add them to the delete list
-	for _, childID := range folderToDelete.ChildIDs {
-		childObjID, err := primitive.ObjectIDFromHex(childID)
-		if err != nil {
-			return fmt.Errorf("invalid child ID: %w", err)
-		}
-		objIDs = append(objIDs, childObjID)
-	}
+	// for _, childID := range folderToDelete.ChildIDs {
+	// 	childObjID, err := primitive.ObjectIDFromHex(childID)
+	// 	if err != nil {
+	// 		return fmt.Errorf("invalid child ID: %w", err)
+	// 	}
+	// 	objIDs = append(objIDs, childObjID)
+	// }
 
 	// Delete all collected ObjectIDs
 	_, err = r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}})
@@ -176,4 +135,13 @@ func (r *MongoFolderRepository) AddChildIDToParent(ctx context.Context, parentID
 		bson.M{"$addToSet": bson.M{"child_ids": childID}},
 	)
 	return err
+}
+
+func (r *MongoFolderRepository) PositionExists(ctx context.Context, position float64) (bool, error) {
+	filter := bson.M{"position": position}
+	count, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

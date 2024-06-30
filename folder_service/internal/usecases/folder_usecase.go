@@ -13,4 +13,5 @@ type FolderRepository interface {
 	DeleteFolder(ctx context.Context, folder *entities.Folder) error
 	UpdateFolderParentID(ctx context.Context, baseID string, parentID string) error
 	AddChildIDToParent(ctx context.Context, parentID string, childID string) error
+	PositionExists(ctx context.Context, position float64) (bool, error)
 }
