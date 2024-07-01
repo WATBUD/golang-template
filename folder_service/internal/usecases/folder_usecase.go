@@ -14,4 +14,5 @@ type FolderRepository interface {
 	UpdateFolderParentID(ctx context.Context, baseID string, parentID string) error
 	AddChildIDToParent(ctx context.Context, parentID string, childID string) error
 	PositionExists(ctx context.Context, baseID string, parentID string, position float64) error
+	FindFoldersByParentID(ctx context.Context, parentID string) ([]entities.Folder, error) // 新增的方法
 }

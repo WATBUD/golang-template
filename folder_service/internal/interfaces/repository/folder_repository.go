@@ -103,21 +103,54 @@ func (r *MongoFolderRepository) DeleteFolder(ctx context.Context, folder *entiti
 		return fmt.Errorf("failed to find folder: %w", err)
 	}
 
-	// Collect ObjectIDs that need to be deleted
-	objIDs := []primitive.ObjectID{objectID} // Add the main folder's ObjectID to the delete list
+	// Recursively delete folder and its children
+	return r.deleteFolderAndChildren(ctx, objectID)
+}
 
-	// Convert ChildIDs to ObjectIDs and add them to the delete list
-	// for _, childID := range folderToDelete.ChildIDs {
-	// 	childObjID, err := primitive.ObjectIDFromHex(childID)
-	// 	if err != nil {
-	// 		return fmt.Errorf("invalid child ID: %w", err)
-	// 	}
-	// 	objIDs = append(objIDs, childObjID)
-	// }
+func (r *MongoFolderRepository) deleteFolderAndChildren(ctx context.Context, folderID primitive.ObjectID) error {
+	// Find all children folders
+	children, err := r.FindFoldersByParentID(ctx, folderID.Hex())
+	if err != nil {
+		return err
+	}
 
-	// Delete all collected ObjectIDs
-	_, err = r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}})
+	// Recursively delete all children folders
+	for _, child := range children {
+		childID, err := primitive.ObjectIDFromHex(child.ID)
+		if err != nil {
+			return fmt.Errorf("invalid child ID: %w", err)
+		}
+		if err := r.deleteFolderAndChildren(ctx, childID); err != nil {
+			return err
+		}
+	}
+
+	// Delete the folder itself
+	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": folderID})
 	return err
+}
+
+func (r *MongoFolderRepository) FindFoldersByParentID(ctx context.Context, parentID string) ([]entities.Folder, error) {
+	filter := bson.M{"parent_id": parentID}
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var folders []entities.Folder
+	for cursor.Next(ctx) {
+		var folder entities.Folder
+		if err := cursor.Decode(&folder); err != nil {
+			return nil, err
+		}
+		folders = append(folders, folder)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return folders, nil
 }
 
 func (r *MongoFolderRepository) UpdateFolderParentID(ctx context.Context, objectID string, parentID string) error {
@@ -143,7 +176,7 @@ func (r *MongoFolderRepository) PositionExists(ctx context.Context, baseID strin
 		"base_id":  baseID,
 		"position": position,
 		"$or": []bson.M{
-			{"parent_id": parentID},
+			{"parent_id": parentID}, //""
 			{"parent_id": nil},
 		},
 	}

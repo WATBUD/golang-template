@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
@@ -62,15 +63,16 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
-	// Set the ID from the URL parameter
-	folder.ID = id
-	err = folder.CheackDefaultValues("delete")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if folder.BaseID == "" {
+		http.Error(w, "BaseID is required and cannot be empty", http.StatusBadRequest)
 		return
 	}
+	// Set the ID from the URL parameter
+	folder.ID = id
 
-	if err := h.repo.DeleteFolder(r.Context(), &folder); err != nil {
+	// Recursively delete folder and its children
+	err = h.deleteFolderAndChildren(r.Context(), &folder)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -78,6 +80,24 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Delete successful"})
+}
+
+func (h *FolderHandler) deleteFolderAndChildren(ctx context.Context, folder *entities.Folder) error {
+	// Find all children folders
+	children, err := h.repo.FindFoldersByParentID(ctx, folder.ID)
+	if err != nil {
+		return err
+	}
+
+	// Recursively delete all children folders
+	for _, child := range children {
+		if err := h.deleteFolderAndChildren(ctx, &child); err != nil {
+			return err
+		}
+	}
+
+	// Delete the folder itself
+	return h.repo.DeleteFolder(ctx, folder)
 }
 
 func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {
@@ -120,33 +140,4 @@ func (h *FolderHandler) UpdateFolderData(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Update successful"})
 	//json.NewEncoder(w).Encode(folder)
-}
-
-func (h *FolderHandler) UpdateFolderParentAndChildIDs(w http.ResponseWriter, r *http.Request) {
-	var requestBody struct {
-		BaseID   string `json:"base_id"`
-		ParentID string `json:"parent_id"`
-		ObjectID string `json:"object_id"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	ctx := r.Context()
-
-	// Update the parent ID of the folder
-	if err := h.repo.UpdateFolderParentID(ctx, requestBody.ObjectID, requestBody.ParentID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Add the ObjectID to the ChildIDs of the new parent folder
-	if err := h.repo.AddChildIDToParent(ctx, requestBody.ParentID, requestBody.ObjectID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }

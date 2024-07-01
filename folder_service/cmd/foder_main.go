@@ -28,6 +28,6 @@ func main() {
 	router.HandleFunc("/folders", folderHandler.GetFolders).Methods("GET")
 	router.HandleFunc("/folders/{id}", folderHandler.DeleteFolder).Methods("DELETE")
 	router.HandleFunc("/folders/{id}", folderHandler.UpdateFolderData).Methods("PUT")
-	router.HandleFunc("/folders/{id}/parent", folderHandler.UpdateFolderParentAndChildIDs).Methods("PUT")
+	// router.HandleFunc("/folders/{id}/parent", folderHandler.UpdateFolderParentAndChildIDs).Methods("PUT")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
