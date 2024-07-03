@@ -173,14 +173,10 @@ func (r *MongoFolderRepository) AddChildIDToParent(ctx context.Context, parentID
 
 func (r *MongoFolderRepository) PositionExists(ctx context.Context, baseID string, parentID string, position float64) error {
 	filter := bson.M{
-		"base_id":  baseID,
-		"position": position,
-		"$or": []bson.M{
-			{"parent_id": parentID}, //""
-			{"parent_id": nil},
-		},
+		"base_id":   baseID,
+		"position":  position,
+		"parent_id": parentID,
 	}
-
 	count, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return err

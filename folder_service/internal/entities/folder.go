@@ -13,7 +13,7 @@ import (
 type Folder struct {
 	ID        string     `bson:"_id,omitempty"`
 	BaseID    string     `bson:"base_id"`
-	ParentID  string     `bson:"parent_id,omitempty"`
+	ParentID  string     `bson:"parent_id"`
 	Position  *float64   `bson:"position"`
 	CreatedAt time.Time  `bson:"created_at"`
 	UpdatedAt time.Time  `bson:"updated_at"`
@@ -27,6 +27,8 @@ func (f *Folder) CheackDefaultValues(operationType string) error {
 		return errors.New("BaseID is required and cannot be empty")
 	}
 	now := time.Now()
+	f.UpdatedAt = now
+	f.Type = "folder"
 	if operationType == "create" {
 		if f.Position == nil {
 			// Handle case where Position is not set
@@ -37,9 +39,7 @@ func (f *Folder) CheackDefaultValues(operationType string) error {
 			return errors.New("position must be a non-negative integer")
 		}
 		f.CreatedAt = now
-		f.Type = "folder"
 	}
-	f.UpdatedAt = now
 
 	return nil
 }

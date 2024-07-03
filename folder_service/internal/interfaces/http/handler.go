@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"folder_API/internal/entities"
 	"folder_API/internal/usecases"
@@ -51,6 +50,11 @@ func (h *FolderHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 
 func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+	id := params["id"]
+	if id == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
 	var folder entities.Folder
 	err := json.NewDecoder(r.Body).Decode(&folder)
 	if err != nil {
@@ -58,20 +62,17 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := params["id"]
-	if id == "" {
-		http.Error(w, "ID is required", http.StatusBadRequest)
+	err = folder.CheackDefaultValues("delete")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if folder.BaseID == "" {
-		http.Error(w, "BaseID is required and cannot be empty", http.StatusBadRequest)
-		return
-	}
+
 	// Set the ID from the URL parameter
 	folder.ID = id
 
 	// Recursively delete folder and its children
-	err = h.deleteFolderAndChildren(r.Context(), &folder)
+	err = h.repo.DeleteFolder(r.Context(), &folder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -80,24 +81,6 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Delete successful"})
-}
-
-func (h *FolderHandler) deleteFolderAndChildren(ctx context.Context, folder *entities.Folder) error {
-	// Find all children folders
-	children, err := h.repo.FindFoldersByParentID(ctx, folder.ID)
-	if err != nil {
-		return err
-	}
-
-	// Recursively delete all children folders
-	for _, child := range children {
-		if err := h.deleteFolderAndChildren(ctx, &child); err != nil {
-			return err
-		}
-	}
-
-	// Delete the folder itself
-	return h.repo.DeleteFolder(ctx, folder)
 }
 
 func (h *FolderHandler) GetFolders(w http.ResponseWriter, r *http.Request) {
