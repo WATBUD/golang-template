@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"folder_API/infrastructure/db"
-	folderHttp "folder_API/internal/interfaces/http"
-	"folder_API/internal/interfaces/repository"
+	"folder_mod/infrastructure/db"
+	folderHttp "folder_mod/internal/interfaces/http"
+	"folder_mod/internal/interfaces/repository"
 
 	"github.com/gorilla/mux"
 )

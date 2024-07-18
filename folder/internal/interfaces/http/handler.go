@@ -2,8 +2,8 @@ package http
 
 import (
 	"encoding/json"
-	"folder_API/internal/entities"
-	"folder_API/internal/usecases"
+	"folder_mod/internal/entities"
+	"folder_mod/internal/usecases"
 	"net/http"
 	"time"
 
@@ -55,24 +55,9 @@ func (h *FolderHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
-	var folder entities.Folder
-	err := json.NewDecoder(r.Body).Decode(&folder)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = folder.CheackDefaultValues("delete")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Set the ID from the URL parameter
-	folder.ID = id
 
 	// Recursively delete folder and its children
-	err = h.repo.DeleteFolder(r.Context(), &folder)
+	err := h.repo.DeleteFolderByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

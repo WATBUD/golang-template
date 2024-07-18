@@ -21,6 +21,11 @@ type Folder struct {
 	Type      string     `bson:"type"`
 }
 
+type FolderData struct {
+	Name  string `bson:"name"`
+	Color string `bson:"color"`
+}
+
 // sets the default values for a Folder
 func (f *Folder) CheackDefaultValues(operationType string) error {
 	if f.BaseID == "" {
@@ -42,11 +47,6 @@ func (f *Folder) CheackDefaultValues(operationType string) error {
 	}
 
 	return nil
-}
-
-type FolderData struct {
-	Name  string `bson:"name"`
-	Color string `bson:"color"`
 }
 
 type Board struct {

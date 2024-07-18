@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"folder_API/internal/entities"
-	"folder_API/internal/usecases"
+	"folder_mod/internal/entities"
+	"folder_mod/internal/usecases"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -86,6 +86,31 @@ func (r *MongoFolderRepository) UpdateFolderData(ctx context.Context, folder *en
 		return fmt.Errorf("no matching document found for ID: %s and BaseID: %s", folder.ID, folder.BaseID)
 	}
 	return nil
+}
+
+func (r *MongoFolderRepository) DeleteFolderByID(ctx context.Context, id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fmt.Errorf("invalid ID: %w", err)
+	}
+
+	// Find the folder to be deleted based on the _id
+	var folderToDelete entities.Folder
+	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&folderToDelete)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("folder not found")
+		}
+		return fmt.Errorf("failed to find folder: %w", err)
+	}
+
+	// Check if the folder type is "folder"
+	if folderToDelete.Type != "folder" {
+		return fmt.Errorf("item to delete is not a folder")
+	}
+
+	// Recursively delete folder and its children
+	return r.deleteFolderAndChildren(ctx, objectID)
 }
 
 func (r *MongoFolderRepository) DeleteFolder(ctx context.Context, folder *entities.Folder) error {
