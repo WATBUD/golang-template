@@ -6,9 +6,10 @@ import (
 	"log"
 	"time"
 
+	"mai.today/database/mongodb"
+
 	"github.com/open-policy-agent/opa/rego"
 	"go.mongodb.org/mongo-driver/bson"
-	"mai.today/database"
 )
 
 func init() {
@@ -16,21 +17,13 @@ func init() {
 	defer cancel()
 
 	// Connect to MongoDB
-	mongoClient, err := database.NewMongoClient()
-	if err != nil {
-		panic(err)
-	}
+	mongoClient := mongodb.Instance()
 
 	// // 連接到MongoDB
 	// client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-	defer func() {
-		if err = mongoClient.Disconnect(ctx); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	rolesCollection := mongoClient.Database("rbac_db").Collection("roles")
 	usersCollection := mongoClient.Database("rbac_db").Collection("users")

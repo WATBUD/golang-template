@@ -5,9 +5,14 @@ use (
 	./authentication
 	./gateway
 	./user
-	./database
+	./core
 	./rbacShell2
 	./rbacLocal1
 	./rbac_db
-	./folder_service
+	./folder
+	./database
+	./foundation
+	./realtime
+	./base
+	
 )

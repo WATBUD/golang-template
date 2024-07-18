@@ -1,10 +1,8 @@
 package user
 
 import (
-	"time"
-
-	"github.com/lithammer/shortuuid/v4"
 	"go.mongodb.org/mongo-driver/mongo"
+	"time"
 )
 
 type User struct {
@@ -30,15 +28,14 @@ func (u *User) CreateUser(firebaseUID string) error {
 	}
 	newModel := UserModel{
 		UserInfo: UserInfo{
-			UserID:      shortuuid.New(),
+			FirebaseUID: firebaseUID,
 			Nickname:    "小強",
 			Avatar:      *picture,
-			FirebaseUID: []string{firebaseUID},
-			Status:      IsRegister,
+			Status:      RegisterProcess,
 			CreatedTime: time.Now().UTC(),
 		},
 		UserBase: UserBase{
-			base_id: []string{"test1", "test2"},
+			BaseID: []string{"test1", "test2"},
 		},
 	}
 	return u.userRepo.CreateUser(newModel)

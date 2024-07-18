@@ -5,10 +5,10 @@ import "time"
 type Status string
 
 const (
-	IsRegister Status = "is_register"
-	Available  Status = "available"
-	Delete     Status = "delete"
-	Disable    Status = "disable"
+	RegisterProcess Status = "in_registration_process"
+	Normal          Status = "normal"
+	Delete          Status = "delete"
+	Disable         Status = "disable"
 )
 
 type Picture struct {
@@ -22,16 +22,15 @@ type UserModel struct {
 }
 
 type UserInfo struct {
-	UserID             string    `bson:"user_id" json:"user_id"`
-	Nickname           string    `bson:"nickname" json:"nickname"` //TODO
-	Avatar             Picture   `bson:"avatar" json:"avatar"`     //TODO
-	FirebaseUID        []string  `bson:"firebase_uid" json:"firebase_uid"`
-	Status             Status    `bson:"status" json:"status"` //TODO
+	FirebaseUID        string    `bson:"firebase_uid" json:"firebase_uid"`
+	Nickname           string    `bson:"nickname" json:"nickname"`
+	Avatar             Picture   `bson:"avatar" json:"avatar"`
+	Status             Status    `bson:"status" json:"status"`
 	LastUpdatedTime    time.Time `bson:"last_updated_time,omitempty" json:"last_updated_time,omitempty"`
 	LastInteractionDay time.Time `bson:"last_interaction_day,omitempty" json:"last_interaction_day,omitempty"`
 	CreatedTime        time.Time `bson:"created_time" json:"created_time"`
 }
 
 type UserBase struct {
-	base_id []string `bson:"base_id" json:"base_id"` //TODO
+	BaseID []string `bson:"base_id" json:"base_id"`
 }

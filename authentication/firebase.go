@@ -2,10 +2,11 @@ package authentication
 
 import (
 	"context"
+	"log"
+
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	"google.golang.org/api/option"
-	"log"
 )
 
 func InitFirebase(credentialsFilePath string) *auth.Client {
