@@ -1,9 +1,9 @@
 package http
 
 import (
-	"chat_room_mod/core/application"
-	"chat_room_mod/core/domain/chatroom"
+	application "chat_room_mod/core/application/chatroom"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,7 @@ func NewChatroomHandler(chatroomUsecase application.ChatroomUsecase) *ChatroomHa
 }
 
 func (h *ChatroomHandler) CreateChatroom(c *gin.Context) {
-	var request chatroom.DTO_CreateChatroomRequest
+	var request application.DTO_CreateChatroomRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -38,18 +38,14 @@ func (h *ChatroomHandler) CreateChatroom(c *gin.Context) {
 
 func (h *ChatroomHandler) SendMessage(c *gin.Context) {
 
-	chatroomID := c.Param("chatroom_id")
-	userID := c.Query("user_id")
+	var input application.DTO_SendMessageRequest
 
-	var input chatroom.DTO_SendMessageRequest
-
-	request := chatroom.DTO_SendMessageRequest{
-		ChatroomID: chatroomID,
-		SenderID:   userID,
+	request := application.DTO_SendMessageRequest{
+		ChatroomID: c.Param("chatroom_id"),
+		SenderID:   c.GetHeader("Authorization"),
 		Type:       input.Type,
 		Data:       input.Data,
 	}
-
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -66,8 +62,22 @@ func (h *ChatroomHandler) SendMessage(c *gin.Context) {
 
 func (h *ChatroomHandler) GetMessages(c *gin.Context) {
 	chatroomID := c.Param("chatroom_id")
+	page := c.DefaultQuery("page", "1")
+	pageSize := c.DefaultQuery("pageSize", "10")
 
-	messages, err := h.ChatroomUsecase.GetMessages(chatroomID)
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+		return
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
+		return
+	}
+
+	messages, err := h.ChatroomUsecase.GetMessages(chatroomID, pageInt, pageSizeInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch messages"})
 		return
@@ -99,16 +109,25 @@ func (h *ChatroomHandler) GetChatroomByID(c *gin.Context) {
 }
 
 func (h *ChatroomHandler) GetChatrooms(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.GetHeader("Authorization")
+	page := c.DefaultQuery("page", "1")          // Default page is 1
+	pageSize := c.DefaultQuery("pageSize", "10") // Default page size is 10
 
-	chatrooms, err := h.ChatroomUsecase.GetChatrooms(userID)
+	pageInt, err := strconv.Atoi(page)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
 		return
 	}
 
-	if chatrooms == nil {
-		chatrooms = []*chatroom.Entity_Chatroom{}
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
+		return
+	}
+	chatrooms, err := h.ChatroomUsecase.GetUserChatrooms(userID, pageInt, pageSizeInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, chatrooms)
@@ -144,7 +163,7 @@ func (h *ChatroomHandler) LeaveChatroom(c *gin.Context) {
 	chatroomID := c.Param("chatroom_id")
 	userID := c.Query("user_id")
 
-	request := chatroom.DTO_AddOrRemoveChatRoomUserRequest{
+	request := application.DTO_AddOrRemoveChatRoomUserRequest{
 		ChatroomID: chatroomID,
 		UserID:     userID,
 	}
@@ -154,7 +173,7 @@ func (h *ChatroomHandler) LeaveChatroom(c *gin.Context) {
 		return
 	}
 
-	err := h.ChatroomUsecase.RemoveUserFromChatroom(request)
+	err := h.ChatroomUsecase.LeaveChatroom(request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -177,7 +196,7 @@ func createCustomErrorResponse(err error) gin.H {
 
 func (h *ChatroomHandler) UserPinnedChatRoom(c *gin.Context) {
 
-	var request chatroom.DTO_PinUserRequest
+	var request application.DTO_PinUserRequest
 	if err := c.ShouldBindJSON(&request); err != nil { // Pass a pointer to the request
 		c.JSON(http.StatusBadRequest, createCustomErrorResponse(err))
 		return
@@ -195,9 +214,29 @@ func (h *ChatroomHandler) UserPinnedChatRoom(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User pinned the chatroom successfully"})
 }
 
+func (h *ChatroomHandler) UserHideChatRoom(c *gin.Context) {
+
+	var request application.DTO_HiddenUserRequest
+	if err := c.ShouldBindJSON(&request); err != nil { // Pass a pointer to the request
+		c.JSON(http.StatusBadRequest, createCustomErrorResponse(err))
+		return
+	}
+	chatroomID := c.Param("chatroom_id")
+	authHeader := c.GetHeader("Authorization")
+	request.ChatroomID = chatroomID
+	request.UserID = authHeader
+	err := h.ChatroomUsecase.UserHideChatRoom(request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User hide the chatroom successfully"})
+}
+
 func (h *ChatroomHandler) UserMutedChatRoom(c *gin.Context) {
 
-	var request chatroom.DTO_MuteUserRequest
+	var request application.DTO_MuteUserRequest
 	if err := c.ShouldBindJSON(&request); err != nil { // Pass a pointer to the request
 		c.JSON(http.StatusBadRequest, createCustomErrorResponse(err))
 		return
@@ -219,7 +258,7 @@ func (h *ChatroomHandler) AddUserToChatroom(c *gin.Context) {
 	chatroomID := c.Param("chatroom_id")
 	authHeader := c.GetHeader("Authorization")
 
-	request := chatroom.DTO_AddOrRemoveChatRoomUserRequest{
+	request := application.DTO_AddOrRemoveChatRoomUserRequest{
 		ChatroomID: chatroomID,
 		UserID:     authHeader,
 	}

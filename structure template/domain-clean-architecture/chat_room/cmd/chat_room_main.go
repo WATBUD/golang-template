@@ -3,7 +3,7 @@ package main
 import (
 	adapters_http "chat_room_mod/adapters/http"
 	"chat_room_mod/adapters/repository"
-	"chat_room_mod/core/application"
+	application "chat_room_mod/core/application/chatroom"
 	mongo_database "chat_room_mod/infrastructure"
 	"context"
 
