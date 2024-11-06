@@ -1,6 +1,6 @@
 
 
-1.handler await A service +await b service組合
+1.handler =>await A service +await b service
 func (h *Handler) HandleRequest(ctx context.Context) error {
     // Execute B Service first
     resultB, err := h.BService.Execute(ctx)
